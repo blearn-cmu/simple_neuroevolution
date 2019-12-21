@@ -4,6 +4,8 @@ export (int) var speed = 200
 export (float) var rotation_speed = 1.5
 export (float) var energy = 100
 
+signal done
+
 var id = 0
 
 var nn
@@ -17,6 +19,7 @@ var rotation_dir = 0
 var score = 0.0
 var best_score = 0.0
 
+var running = false
 var perform_mode = false
 
 func set_target(_target):
@@ -93,6 +96,13 @@ func reset():
 	# respawn
 	self.position = Vector2(524.0, 324.0)
 
+func start():
+	self.running = true
+
+func end():
+	self.running = false
+	emit_signal("done", self.id, self.score)
+
 func get_centered_pos():
 	var _x = self.position.x + (self.size.x/2)
 	var _y = self.position.y + (self.size.y/2)
@@ -115,27 +125,29 @@ func _on_food_hit():
 	score += 10
 
 func _physics_process(delta):
-	ai_sense_env()
-	get_ai_input()
-	
-	#energy -= 10 * delta # existense energy cost
-	energy -= 10 # existense energy cost
-	
-	if(energy > -0.0001): # move
-		#rotation += rotation_dir * rotation_speed * delta
-		#velocity = move_and_slide(velocity)
-		rotation += rotation_dir * rotation_speed
-		var collision = move_and_collide(velocity)
-		if collision:
-			velocity = velocity.slide(collision.normal)
+	if running:
+		ai_sense_env()
+		get_ai_input()
+		
+		score += 1.0
+		energy -= 10 # existense energy cost
+		
+		if(energy > -0.0001): # move
+			#rotation += rotation_dir * rotation_speed * delta
+			#velocity = move_and_slide(velocity)
+			rotation += rotation_dir * rotation_speed
+			var collision = move_and_collide(velocity)
+			if collision:
+				velocity = velocity.slide(collision.normal)
+		
+		if(energy < -10.00): # die
+			#reset()
+			end()
 
 func _process(delta):
-	#score += 1.0 * delta
-	score += 1.0
-	
-	update_engerybar(energy)
-	if(energy < -10.00): # die
-		reset()
+	if running:
+		#score += 1.0
+		update_engerybar(energy)
 
 func _ready():
 	self.nn = get_node("DeepNN")
